@@ -216,9 +216,9 @@ def MapAirports(airports):
 
 import math
 
-# Función Haversine (distancia en km entre dos coordenadas)
+
 def haversine(lat1, lon1, lat2, lon2):
-    R = 6371  # radio de la Tierra en km
+    R = 6371  
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
