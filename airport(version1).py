@@ -136,21 +136,3 @@ def PlotAirports(airports):
 
 
 
-def PlotAirlines(aircrafts):
-    airlines = []
-    contador = []
-
-    i = 0
-    while i < len(aircrafts):
-        airline = aircrafts[i].airline
-
-
-
-
-
-    plt.bar(airlines, contador)
-    plt.xlabel("Aerolíneas")
-    plt.ylabel("Número de vuelos")
-    plt.title("Vuelos por aerolínea")
-    plt.xticks(rotation=45)
-    plt.show()
