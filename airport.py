@@ -25,7 +25,8 @@ def IsSchengenAirport(airport):
 
        airport.schengen = encontrado
 
-def SetSchengen(airport):IsSchengenAirport(airport)
+def SetSchengen(airport):
+    IsSchengenAirport(airport)
 
 def PrintAirport(airport):
 
@@ -33,9 +34,9 @@ def PrintAirport(airport):
 
 
 def LoadAirports(Filename):
-    airports=LoadAirports("airports.txt")
+    airports=[]
     try:
-        F= open("airports", "r")
+        F= open("filename, r")
         lines= F.readlines()
         F.close()
         i=1
@@ -57,8 +58,7 @@ def LoadAirports(Filename):
 
 
     except FileNotFoundError:
-        airports = LoadAirports("airports.txt")
-
+        airports =[]
     return airports
 
 
@@ -93,6 +93,7 @@ def AddAirport(airports, airport):
 
     if not encontrado:
         airports.append(airport)
+
 def RemoveAirport(airports, code):
 
     i = 0
@@ -119,8 +120,12 @@ def ConvertCoord(coord):
      return decimal
 
 def PlotAirports(airports):
-
-    schengen = sum(1 for a in airports if a.schengen)
+    i=0
+    schengen=0
+    while i < len(airports):
+        if airports[i].schengen==True:
+            schengen=schengen+1
+        i=i+1
     noschengen = len(airports) - schengen
 
     fig,ax = plt.subplots()

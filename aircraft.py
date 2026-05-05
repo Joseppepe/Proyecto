@@ -18,7 +18,7 @@ def LoadArrivals(Filename):
 
         while line!="":
 
-            parts = line[i].strip().split()
+            parts = line.strip().split()
 
             if len(parts) == 4:
 
@@ -100,30 +100,29 @@ def SaveFlights(aircrafts, filename):
         i =i+ 1
     F.close()
 
-    def PlotAirlines(aircrafts):
-        airlines = []
-        contador = []
+def PlotAirline(aircrafts):
 
-        i = 0
-        while i < len(aircrafts):
-            airline = aircrafts[i].airline
+    airlines = []
+    contador = []
 
-            encontrado = False
-            j = 0
+    i = 0
+    while i < len(aircrafts):
+        airline = aircrafts[i].airline
 
-            while j < len(airlines):
-                if airlines[j] == airline:
-                    contador[j] += 1
-                    encontrado = True
-                j += 1
+        encontrado = False
+        j = 0
 
-            if not encontrado:
-                airlines.append(airline)
-                contador.append(1)
+        while j < len(airlines):
+            if airlines[j] == airline:
+                contador[j] += 1
+                encontrado = True
+            j += 1
 
-            i += 1
+        if not encontrado:
+            airlines.append(airline)
+            contador.append(1)
 
-
+        i += 1
 
     plt.bar(airlines, contador)
     plt.xlabel("Aerolíneas")
@@ -214,12 +213,12 @@ def MapAirports(airports):
     except IndexError:
         print("Datos incorrectos")
 
-import math
 
-# Función Haversine (distancia en km entre dos coordenadas)
+
+
 def haversine(lat1, lon1, lat2, lon2):
-    R = 6371  # radio de la Tierra en km
-
+    R = 6371
+    import math
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
@@ -230,8 +229,42 @@ def haversine(lat1, lon1, lat2, lon2):
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
+
     return R * c
 
 
+def LongDistanceArrivals(aircrafts, airports):
 
-def LongDistanceArrivals(aircrafts):
+    LEBL_LAT = 41.2974
+    LEBL_LON = 2.0833
+
+    result = []
+    i = 0
+
+    while i < len(aircrafts):
+        aircraft = aircrafts[i]
+
+        j = 0
+        encontrado = False
+        origen_airport = None
+
+        while j < len(airports) and not encontrado:
+            if airports[j].code == aircraft.origen:
+                origen_airport = airports[j]
+                encontrado = True
+            else:
+                j += 1
+
+        if encontrado:
+            dist = haversine(origen_airport.lat,origen_airport.lon,LEBL_LAT,LEBL_LON )
+
+            if dist > 2000:
+                result.append(aircraft)
+
+        i += 1
+
+    return result
+
+
+
+
