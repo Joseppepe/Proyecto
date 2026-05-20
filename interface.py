@@ -134,7 +134,7 @@ def DClick():
 
 def EClick():
     """Botón 'Load Arrivals': Carga los vuelos desde Arrivals.txt."""
-    aircrafts[:] = LoadArrivals("Arrivales.txt")
+    aircrafts[:] = LoadArrivals("Arrivals.txt")
 
     console_text.config(state=NORMAL)
     console_text.delete("1.0", END)
