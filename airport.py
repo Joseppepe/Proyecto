@@ -8,13 +8,15 @@ class Airport:
         self.schengen = False
 
 
-def IsSchengenAirport(airport):
+def IsSchengenAirport(code):
+       if code=="":
+           return False
 
        prefijos= ['LO', 'EB', 'LK', 'LC', 'EK', 'EE', 'EF', 'LF', 'ED', 'LG', 'EH', 'LH',
                'BI', 'LI', 'EV', 'EY', 'EL', 'LM', 'EN', 'EP', 'LP', 'LZ', 'LJ', 'LE','ES', 'LS']
        i=0
        encontrado=False
-       prefijo=airport.code[:2]
+       prefijo=code[:2]
 
        while i < len(prefijos) and not encontrado:
           if prefijos[i]==prefijo:
@@ -23,10 +25,10 @@ def IsSchengenAirport(airport):
              i=i+1
              encontrado=False
 
-       airport.schengen = encontrado
+       return encontrado
 
 def SetSchengen(airport):
-    IsSchengenAirport(airport)
+    airport.schengen=IsSchengenAirport(airport.code)
 
 def PrintAirport(airport):
 
@@ -36,24 +38,28 @@ def PrintAirport(airport):
 def LoadAirports(Filename):
     airports=[]
     try:
-        F= open("filename, r")
-        lines= F.readlines()
-        F.close()
+        F= open(Filename, "r")
+
+        F.readline()
+        line= F.readline()
+
+
         i=1
 
-        while i<len(lines):
+        while line!="":
 
-            parts=lines[i].split()
+            parts=line.split()
             code=parts[0]
             lat=ConvertCoord(parts[1])
             lon=ConvertCoord(parts[2])
 
             airport=Airport(code, lat, lon)
-            airports.append(airport)
             SetSchengen(airport)
+            airports.append(airport)
 
+            line= F.readline()
 
-            i=i+1
+        F.close()
 
 
 
@@ -65,7 +71,7 @@ def LoadAirports(Filename):
 def SaveSchengenAirports(airports, filename):
 
     if len(airports) == 0:
-        return
+        return -1
 
     F = open(filename, "w")
 
@@ -81,7 +87,10 @@ def SaveSchengenAirports(airports, filename):
 
     F.close()
 
+
 def AddAirport(airports, airport):
+    if airport.code=="":
+        return
     i = 0
     encontrado = False
 
@@ -101,16 +110,23 @@ def RemoveAirport(airports, code):
 
     while i < len(airports) and not encontrado:
         if airports[i].code == code:
-            airports.pop(i)
+            airports[:]=airports[:i]+airports[i+1:]
             encontrado = True
         else:
             i = i + 1
+    if not encontrado:
+        return -1
 
 def ConvertCoord(coord):
      direccion=coord[0]
-     degrees = int(coord[1:3])
-     minutes=int(coord[3:5])
-     seconds=int(coord[5:])
+     if direccion == "N" or direccion == "S":
+         degrees = int(coord[1:3])
+         minutes=int(coord[3:5])
+         seconds=int(coord[5:])
+     else:
+         degrees = int(coord[1:4])
+         minutes = int(coord[4:6])
+         seconds = int(coord[6:8])
 
      decimal=degrees+minutes/60+seconds/3600
 
@@ -142,23 +158,41 @@ def PlotAirports(airports):
 def MapAirports(airports):
 
     try:
-         F=open("airports.kml","w")
+         F=open("airports.kml", "w")
 
-         F.write('<?xml version="1.0">\n')
+         F.write('<?xml version="1.0" encoding="UTF-8"?>\n')
          F.write('<kml xmlns="http://www.opengis.net/kml/2.2">\n')
          F.write('<Document>\n')
+
+         F.write('<Style id="schengen">\n')
+         F.write('<IconStyle>\n')
+         F.write('<color>ff00ff00</color>\n')
+         F.write('</IconStyle>\n')
+         F.write('</Style>\n')
+
+         F.write('<Style id="nonschengen">\n')
+         F.write('<IconStyle>\n')
+         F.write('<color>ff0000ff</color>\n')
+         F.write('</IconStyle>\n')
+         F.write('</Style>\n')
 
          i=0
          while i<len(airports):
 
             airport = airports[i]
+            if airport.schengen:
+                style = "#schengen"
+            else:
+                style = "#nonschengen"
 
-            F.write("<Placemark>\n")
-            F.write(f"<name>{airport.code}</name>\n")
-            F.write("<Point>\n")
-            F.write(f"<coordinates>{airport.lon},{airport.lat},0</coordinates>\n")
-            F.write("</Point>\n")
-            F.write("</Placemark>\n")
+            if airport.code!="":
+                F.write("<Placemark>\n")
+                F.write(f"<name>{airport.code}</name>\n")
+                F.write(f"<styleUrl>{style}</styleUrl>\n")
+                F.write("<Point>\n")
+                F.write(f"<coordinates>{airport.lon},{airport.lat},0</coordinates>\n")
+                F.write("</Point>\n")
+                F.write("</Placemark>\n")
 
             i=i+1
 
@@ -172,17 +206,8 @@ def MapAirports(airports):
         print("Datos incorrectos")
     except IndexError:
         print("Datos incorrectos")
-
-
-
-
-
-
-
-
-
-
-
+    import os
+    os.startfile("airports.kml")
 
 
 
