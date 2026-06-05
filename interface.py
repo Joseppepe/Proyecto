@@ -9,6 +9,7 @@ airports = []
 aircrafts = []
 lebl_airport = []
 
+
 # FUNCIONES AUXILIARES DE LA INTERFAZ
 
 def log_message(title, message):
@@ -42,6 +43,128 @@ def show_file(filename):
     except FileNotFoundError:
         log_message("Error", f"{filename} file not found.")
 
+def DrawAirportWindow():
+
+    map_window = Toplevel(window)
+    map_window.title("Gate Assignment")
+    map_window.geometry("1200x600")
+
+    canvas = Canvas(map_window, bg="white")
+    canvas.pack(fill=BOTH, expand=True)
+
+    occupancy = GateOccupancy(lebl_airport[0])
+
+    # Barra T1
+    canvas.create_rectangle(20, 40,550, 60,fill="#0B5C7A")
+
+    canvas.create_text(285,20,text="T1",font=("Arial", 16, "bold"))
+
+    # Barra T2
+    canvas.create_rectangle(650, 40,1150, 60,fill="#0B5C7A")
+
+    canvas.create_text(900,20,text="T2",font=("Arial", 16, "bold"))
+
+    areas_x = {# T1
+        "T1A": 80,
+        "T1B": 180,
+        "T1C": 280,
+        "T1D": 380,
+        "T1E": 480,
+
+        # T2
+        "T2M": 720,
+        "T2R": 800,
+        "T2S": 880,
+        "T2U": 960,
+        "T2W": 1040,
+        "T2Y": 1120}
+
+    # Dibujar columnas
+    for area in areas_x:
+
+        x = areas_x[area]
+
+        canvas.create_rectangle(x,60,x + 18,320,fill="#0B5C7A")
+
+        canvas.create_text(x + 9,340,text=area,font=("Arial", 9, "bold"))
+
+    posiciones = {}
+    lado = {}
+
+    for area in areas_x:
+        posiciones[area] = 90
+        lado[area] = 0
+
+    i = 0
+
+    while i < len(occupancy):
+
+        gate_name = occupancy[i][0]
+        occupied = occupancy[i][1]
+        aircraft = occupancy[i][2]
+
+        area = ""
+
+        if gate_name.startswith("T1A"):
+            area = "T1A"
+
+        elif gate_name.startswith("T1B"):
+            area = "T1B"
+
+        elif gate_name.startswith("T1C"):
+            area = "T1C"
+
+        elif gate_name.startswith("T1D"):
+            area = "T1D"
+
+        elif gate_name.startswith("T1E"):
+            area = "T1E"
+
+        elif gate_name.startswith("T2M"):
+            area = "T2M"
+
+        elif gate_name.startswith("T2R"):
+            area = "T2R"
+
+        elif gate_name.startswith("T2S"):
+            area = "T2S"
+
+        elif gate_name.startswith("T2U"):
+            area = "T2U"
+
+        elif gate_name.startswith("T2W"):
+            area = "T2W"
+
+        elif gate_name.startswith("T2Y"):
+            area = "T2Y"
+
+        if area != "" and occupied == True:
+
+            x = areas_x[area]
+            y = posiciones[area]
+
+            # Izquierda
+            if lado[area] % 2 == 0:
+
+                canvas.create_line(x,y,x - 20,y,width=2)
+
+                canvas.create_rectangle(x - 30,y - 4,x - 20,y + 4,fill="green")
+
+                canvas.create_text(x - 35,y,text=aircraft,anchor="e",font=("Arial", 6))
+
+            # Derecha
+            else:
+
+                canvas.create_line(x + 18,y,x + 38,y, width=2)
+
+                canvas.create_rectangle(x + 38,y - 4,x + 48,y + 4,fill="green")
+
+                canvas.create_text(x + 53,y,text=aircraft,anchor="w",font=("Arial", 6))
+
+            lado[area] = lado[area] + 1
+            posiciones[area] = posiciones[area] + 12
+
+        i = i + 1
 
 # FUNCIONES DE LOS BOTONES (VERSIÓN 1)
 
@@ -234,14 +357,12 @@ def KClick():
     if len(aircrafts) > 0:
         vuelos = LongDistanceArrivals(aircrafts)
         log_message("Long Distance", f"{len(vuelos)} long distance flights found.")
-        # Muestra en consola cuántos vuelos de larga distancia se han encontrado
-        mensaje = "Long distance flights:\n"# Crea el texto inicial donde se guardará la información de los vuelos
-
+        mensaje = "Long distance flights:\n"
 
         i = 0
-        while i < len(vuelos):# Recorre todos los vuelos encontrados
-            mensaje = mensaje + vuelos[i].aircraft + " " + vuelos[i].origen + " " + vuelos[i].time + " " + vuelos[i].airline + "\n"
-            # Añade los datos del vuelo al mensaje
+        while i < len(vuelos):
+            mensaje = mensaje + vuelos[i].aircraft + " " + vuelos[i].origen + " " + vuelos[i].time + " " + vuelos[
+                i].airline + "\n"
             i += 1
 
         result_message(mensaje)
@@ -253,13 +374,12 @@ def KClick():
 
 def LClick():
     """Botón 'Load Airport Structure': Carga el árbol de terminales, áreas y puertas de LEBL."""
-    airport = LoadAirportStructure("Terminals.txt")  # Nota: Asumiendo que el archivo es LEBL.txt según el enunciado
+    airport = LoadAirportStructure("Terminals.txt")  # O LEBL.txt dependiendo de tu archivo
 
     if airport != "":
         lebl_airport.clear()
         lebl_airport.append(airport)
         log_message("Load Airport", " Airport structure loaded correctly.")
-        # Opcional: mostrar archivo (si existe)
         show_file("Terminals.txt")
     else:
         log_message("Error", "Could not load airport structure")
@@ -278,7 +398,7 @@ def MClick():
         i = 0
         while i < len(occupancy):
             g = occupancy[i]
-            if g[1]:  # Si occupied es True
+            if g[1]:
                 estado = "Occupied by " + g[2]
                 occupied += 1
             else:
@@ -294,7 +414,6 @@ def MClick():
 
 def NClick():
     """Botón 'Assign Gates': Asigna puertas a los vuelos cargados."""
-    # CORRECCIÓN: len(lebl_airport) en lugar de (lebl_airport)
     if len(lebl_airport) == 0:
         log_message("Warning", "Load airport structure first.")
         return
@@ -315,6 +434,63 @@ def NClick():
         i += 1
 
     result_message(f"Flights assigned: {asignados}")
+    DrawAirportWindow()
+
+# FUNCIONES DE LOS BOTONES (VERSIÓN 4)
+
+def OClick():
+    """Botón 'Load & Merge Departures': Carga salidas y las fusiona con las llegadas."""
+    if len(aircrafts) == 0:
+        log_message("Warning", "Please load arrivals first (Version 2).")
+        return
+
+    # Cargamos las salidas (nota: gestionamos si devuelve la tupla de error)
+    deps = LoadDepartures("Departures.txt")
+    if isinstance(deps, tuple):
+        deps = deps[0]  # Lista vacía si hubo error
+
+    if len(deps) > 0:
+        merged = MergeMovements(aircrafts, deps)
+        if merged != -1:
+            aircrafts[:] = merged  # Sobrescribimos la lista en memoria con la fusionada
+            log_message("Merge", f"Departures loaded and merged. Total flights to process: {len(aircrafts)}")
+            result_message(f"Departures merged successfully.\nTotal Flights: {len(aircrafts)}")
+        else:
+            log_message("Error", "Could not merge movements.")
+    else:
+        log_message("Warning", "No departures loaded. Check Departures.txt.")
+
+
+def PClick():
+    """Botón 'Assign Gates at Hour': Asigna/Libera puertas en una hora concreta (leyendo del input)."""
+    if len(lebl_airport) == 0 or len(aircrafts) == 0:
+        log_message("Warning", "Load airport structure and merged flights first.")
+        return
+
+    # Cogemos la hora de la caja de texto
+    time_input = fraseEntry.get().strip()
+
+    if time_input == "":
+        log_message("Warning", "Please enter a time in the Input box (e.g. 14:00).")
+        return
+
+    if ":" in time_input:
+        unassigned = AssignGatesAtTime(lebl_airport[0], aircrafts, time_input)
+        log_message("Assign Hour", f"Gates successfully updated for {time_input}. Unassigned: {unassigned}")
+        result_message(f"Dynamic Gate Assignment at {time_input}\nUnassigned flights: {unassigned}")
+    else:
+        log_message("Error", "Time format must be HH:MM (e.g. 14:00).")
+
+
+def QClick():
+    """Botón 'Plot Day Occupancy': Simula todo el día y muestra la gráfica."""
+    if len(lebl_airport) == 0 or len(aircrafts) == 0:
+        log_message("Warning", "Load airport structure and merged flights first.")
+        return
+
+    log_message("Plot", "Simulating full day and generating occupancy plot...")
+    PlotDayOccupancy(lebl_airport[0], aircrafts)
+    result_message("Day occupancy plot generated successfully.")
 
 
 # FUNCIONES DE LIMPIEZA
@@ -339,7 +515,7 @@ def ClearAll():
 
     fraseEntry.delete(0, END)
 
-    ClearConsole()  # Reutiliza la función anterior para ahorrar código
+    ClearConsole()
     log_message("System", "All data and screens cleared.")
 
 
@@ -350,17 +526,14 @@ window.title("Airport Management")
 window.geometry("1600x1000")
 window.configure(bg='#333333')
 
-# Configuración del grid principal (para que sea responsivo)
-window.columnconfigure(0, weight=1, minsize=250)  # Columna de botones
-window.columnconfigure(1, weight=5)  # Columna de texto
+window.columnconfigure(0, weight=1, minsize=250)
+window.columnconfigure(1, weight=5)
 window.rowconfigure(2, weight=1)
 
-# Etiqueta de Título
 tituloLabel = Label(window, text="Airport & Flight Management", font=("Helvetica", 22, "bold"), bg="#333333",
                     fg="white", relief="groove", borderwidth=4, padx=10, pady=10)
 tituloLabel.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N + S + E + W)
 
-# Marco lateral izquierdo (Botones)
 botones_frame = Frame(window, bg='#333333')
 botones_frame.grid(row=1, column=0, rowspan=2, sticky=N + S + E + W, padx=10)
 
@@ -406,6 +579,16 @@ Button(botones_frame, text="Show Gate Occupancy", font=("Arial", 9, "bold"), bg=
 Button(botones_frame, text="Assign Gates", font=("Arial", 9, "bold"), bg='#461e6e', fg="white", command=NClick,
        relief="raised", borderwidth=3).pack(fill=X, pady=2)
 
+# Botones Versión 4 (Nuevos)
+Label(botones_frame, text="Versión 4", font=("Arial", 12, "bold"), bg="#333333", fg="white").pack(pady=(15, 5),
+                                                                                                  anchor=W)
+Button(botones_frame, text="Load & Merge Departures", font=("Arial", 9, "bold"), bg='#e68a00', fg="white",
+       command=OClick, relief="raised", borderwidth=3).pack(fill=X, pady=2)
+Button(botones_frame, text="Assign Gates at Hour", font=("Arial", 9, "bold"), bg='#cc7a00', fg="white", command=PClick,
+       relief="raised", borderwidth=3).pack(fill=X, pady=2)
+Button(botones_frame, text="Plot Day Occupancy", font=("Arial", 9, "bold"), bg='#b36b00', fg="white", command=QClick,
+       relief="raised", borderwidth=3).pack(fill=X, pady=2)
+
 # Botones Otros (Limpieza)
 Label(botones_frame, text="Other Functions", font=("Arial", 12, "bold"), bg="#333333", fg="white").pack(pady=(15, 5),
                                                                                                         anchor=W)
@@ -425,8 +608,8 @@ fraseEntry.pack(side=LEFT, fill=X, expand=True)
 # Marco inferior derecho (Consolas)
 right_frame = Frame(window, bg="#333333")
 right_frame.grid(row=2, column=1, sticky=N + S + E + W, padx=10, pady=(0, 10))
-right_frame.rowconfigure(0, weight=5)  # Más espacio para la terminal principal
-right_frame.rowconfigure(1, weight=1)  # Menos espacio para los resultados rápidos
+right_frame.rowconfigure(0, weight=5)
+right_frame.rowconfigure(1, weight=1)
 right_frame.columnconfigure(0, weight=1)
 
 # Consola principal (Terminal)

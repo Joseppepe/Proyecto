@@ -106,7 +106,7 @@ def LoadAirlines(terminal, t_name):
 
 
 def LoadAirportStructure(filename):
-    """Lee el archivo de estructura (ej. LEBL.txt) y construye toda la jerarquía de objetos del aeropuerto."""
+    """Lee el archivo de estructura (ej. Terminals.txt) y construye toda la jerarquía de objetos del aeropuerto."""
     try:
         F = open(filename, "r")
     except:
@@ -233,42 +233,38 @@ def SearchTerminal(bcn, name):
 
 def AssignGate(bcn, aircraft):
     """
-    Lógica principal de asignación:
-    Busca la primera puerta libre en la terminal correcta y en el tipo de área correcto (Schengen/No Schengen).
+    Versión actualizada para V4: Asigna puerta. Si el vuelo es nocturno (origen vacío),
+    comprueba el destino para saber si el área debe ser Schengen.
     """
-    # 1. Averigua a qué terminal va este avión
     terminal_name = SearchTerminal(bcn, aircraft.airline)
 
-    # Si la aerolínea no está registrada, no puede asignar puerta
     if terminal_name == "":
         return -1
 
-    # 2. Averigua el tipo de vuelo (Schengen o non-Schengen) usando la función importada
     tipo = "Schengen"
-    if not IsSchengenAirport(aircraft.origen):
-        tipo = "non-Schengen"
+    # Diferencia entre vuelo normal/llegada y vuelo nocturno (solo salida)
+    if aircraft.origen != "":
+        if not IsSchengenAirport(aircraft.origen):
+            tipo = "non-Schengen"
+    else:
+        if not IsSchengenAirport(aircraft.destination):
+            tipo = "non-Schengen"
 
     i = 0
-    # Nivel 1: Recorre terminales para buscar la que coincide
     while i < len(bcn.terminals):
         terminal = bcn.terminals[i]
 
         if terminal.name == terminal_name:
             j = 0
-
-            # Nivel 2: Busca áreas dentro de esa terminal que coincidan con el 'tipo' (Schengen/non-Schengen)
             while j < len(terminal.boarding_areas):
                 area = terminal.boarding_areas[j]
 
                 if area.type == tipo:
                     k = 0
-
-                    # Nivel 3: Busca la primera puerta que no esté ocupada
                     while k < len(area.gates):
                         gate = area.gates[k]
 
                         if gate.occupied == False:
-                            # ¡Puerta encontrada! La marca como ocupada, guarda el avión y devuelve el nombre
                             gate.occupied = True
                             gate.aircraft_id = aircraft.aircraft
                             return gate.name
@@ -277,7 +273,6 @@ def AssignGate(bcn, aircraft):
                 j += 1
         i += 1
 
-    # Si recorre todo y no hay puertas libres (o no hay áreas de ese tipo), devuelve error
     return -1
 
 
@@ -285,3 +280,162 @@ def AssignGate(bcn, aircraft):
 if __name__ == "__main__":
     # Ejemplo de uso básico (asegúrate de tener LEBL.txt y los archivos de aerolíneas en la misma carpeta)
     pass
+
+
+def AssignNightGates(bcn, aircrafts):
+    """Asigna puerta a los aviones que hacen noche utilizando la nueva versión de AssignGate[cite: 408]."""
+    if len(aircrafts) == 0:
+        return -1
+
+    i = 0
+    while i < len(aircrafts):
+        ac = aircrafts[i]
+        # Verificar que sea solo un vuelo de salida (llegada vacía) [cite: 408]
+        if ac.time == "" and ac.departure != "":
+            AssignGate(bcn, ac)
+        i += 1
+
+
+def FreeGate(bcn, id):
+    """Busca el id del avión en el estado del aeropuerto bcn y libera su puerta[cite: 410, 411]."""
+    encontrado = False
+    i = 0
+    while i < len(bcn.terminals) and not encontrado:
+        terminal = bcn.terminals[i]
+        j = 0
+        while j < len(terminal.boarding_areas) and not encontrado:
+            area = terminal.boarding_areas[j]
+            k = 0
+            while k < len(area.gates) and not encontrado:
+                gate = area.gates[k]
+                if gate.occupied and gate.aircraft_id == id:
+                    gate.occupied = False
+                    gate.aircraft_id = ""
+                    encontrado = True
+                k += 1
+            j += 1
+        i += 1
+
+    if not encontrado:
+        return -1  # Error si el avión no es encontrado [cite: 412]
+
+
+def AssignGatesAtTime(bcn, aircrafts, time):
+    """Libera puertas de aviones que ya se fueron y asigna a los que llegan en el periodo de una hora[cite: 425]."""
+    target_hour = int(time.split(":")[0])
+
+    # 1. Liberar puertas (aviones cuya hora de salida es ANTERIOR a la hora a evaluar) [cite: 425]
+    i = 0
+    while i < len(bcn.terminals):
+        terminal = bcn.terminals[i]
+        j = 0
+        while j < len(terminal.boarding_areas):
+            area = terminal.boarding_areas[j]
+            k = 0
+            while k < len(area.gates):
+                gate = area.gates[k]
+                if gate.occupied:
+                    ac_id = gate.aircraft_id
+
+                    # Buscar a qué hora se va este avión
+                    w = 0
+                    found_ac = False
+                    ac_dep_hour = -1
+
+                    while w < len(aircrafts) and not found_ac:
+                        if aircrafts[w].aircraft == ac_id:
+                            if aircrafts[w].departure != "":
+                                ac_dep_hour = int(aircrafts[w].departure.split(":")[0])
+                            found_ac = True
+                        w += 1
+
+                    # Si encontramos su hora de salida y es estrictamente anterior a la hora actual, liberamos la puerta
+                    if found_ac and ac_dep_hour != -1 and ac_dep_hour < target_hour:
+                        FreeGate(bcn, ac_id)
+
+                k += 1
+            j += 1
+        i += 1
+
+    # 2. Asignar puertas a los que aterrizan en ESTE periodo de 1 hora [cite: 425]
+    unassigned = 0
+    x = 0
+    while x < len(aircrafts):
+        ac = aircrafts[x]
+        if ac.time != "":
+            arr_hour = int(ac.time.split(":")[0])
+            if arr_hour == target_hour:
+                res = AssignGate(bcn, ac)
+                # Si AssignGate devuelve -1 significa que la puerta está llena
+                if res == -1:
+                    unassigned += 1
+        x += 1
+
+    return unassigned
+
+
+def PlotDayOccupancy(bcn, aircrafts):
+    """Simula todo el día, hora a hora, y muestra la ocupación por terminal y aviones no asignados[cite: 429, 431]."""
+    import matplotlib.pyplot as plt
+
+    horas = []
+    ocupacion_t1 = []
+    ocupacion_t2 = []
+    no_asignados = []
+
+    h = 0
+    # Bucle de las 24 horas del día ("00:00" a "23:00")
+    while h < 24:
+        time_str = str(h) + ":00"
+        if h < 10:
+            time_str = "0" + str(h) + ":00"
+
+        horas.append(time_str)
+
+        # Asignar y liberar puertas en esta hora [cite: 431]
+        unasigned_now = AssignGatesAtTime(bcn, aircrafts, time_str)
+        no_asignados.append(unasigned_now)
+
+        # Contar ocupación actual
+        t1_occ = 0
+        t2_occ = 0
+
+        i = 0
+        while i < len(bcn.terminals):
+            terminal = bcn.terminals[i]
+            occ_count = 0
+            j = 0
+            while j < len(terminal.boarding_areas):
+                area = terminal.boarding_areas[j]
+                k = 0
+                while k < len(area.gates):
+                    if area.gates[k].occupied:
+                        occ_count += 1
+                    k += 1
+                j += 1
+
+            if terminal.name == "T1":
+                t1_occ = occ_count
+            elif terminal.name == "T2":
+                t2_occ = occ_count
+
+            i += 1
+
+        ocupacion_t1.append(t1_occ)
+        ocupacion_t2.append(t2_occ)
+
+        h += 1
+
+    # Dibuja el gráfico [cite: 431]
+    plt.figure(figsize=(12, 6))
+    plt.plot(horas, ocupacion_t1, label="Ocupación T1", marker='o', color='blue')
+    plt.plot(horas, ocupacion_t2, label="Ocupación T2", marker='x', color='green')
+    plt.bar(horas, no_asignados, label="No Asignados", color='red', alpha=0.5)
+
+    plt.xlabel("Hora del día")
+    plt.ylabel("Número de Puertas / Aviones")
+    plt.title("Ocupación diaria del aeropuerto LEBL")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

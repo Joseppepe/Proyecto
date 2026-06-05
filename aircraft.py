@@ -3,14 +3,15 @@ from airport import LoadAirports
 
 
 class Aircraft:
-    """Clase que representa un avión/vuelo con su identificación, origen, hora de llegada y aerolínea."""
+    """Clase que representa un avión/vuelo con su identificación, origen, hora de llegada, aerolínea, destino y salida."""
 
-    def __init__(self, aircraft, origen, time, airline):
-        self.aircraft = str(aircraft)  # ID del avión
-        self.origen = str(origen)  # Código ICAO del aeropuerto de origen (4 caracteres)
-        self.time = str(time)  # Hora esperada de aterrizaje en formato hh:mm
-        self.airline = str(airline)  # Código ICAO de la compañía aérea (3 caracteres)
-
+    def __init__(self, aircraft, origen, time, airline, destination="", departure=""):
+        self.aircraft = str(aircraft)       # ID del avión
+        self.origen = str(origen)           # Código ICAO origen
+        self.time = str(time)               # Hora de llegada (hh:mm)
+        self.airline = str(airline)         # Código ICAO aerolínea
+        self.destination = str(destination) # Código ICAO destino
+        self.departure = str(departure)     # Hora de salida (hh:mm)
 
 def LoadArrivals(Filename):
     """Abre un archivo de llegadas, valida los datos de cada línea y devuelve una lista de objetos Aircraft."""
@@ -387,3 +388,107 @@ def LongDistanceArrivals(aircrafts):
         i += 1
 
     return result
+
+
+def LoadDepartures(filename):
+    """Lee el fichero de salidas y devuelve una lista de Aircraft con origen y hora vacíos[cite: 387, 389]."""
+    aircrafts = []
+    try:
+        F = open(filename, "r")
+        F.readline()
+        line = F.readline()
+
+        while line != "":
+            parts = line.strip().split()
+
+            if len(parts) == 4:
+                aircraft_id = parts[0]
+                destination = parts[1]
+                departure = parts[2]
+                airline = parts[3]
+
+                parts_time = departure.split(":")
+                if len(parts_time) == 2:
+                    # Creamos el objeto Aircraft dejando origen y time (llegada) vacíos
+                    ac = Aircraft(aircraft_id, "", "", airline, destination, departure)
+                    aircrafts.append(ac)
+
+            line = F.readline()
+
+        F.close()
+
+    except FileNotFoundError:
+        # Devuelve lista vacía y código de error si el archivo no existe [cite: 390]
+        return [], -1
+
+    return aircrafts
+
+
+def MergeMovements(arrivals, departures):
+    """Fusiona llegadas y salidas. Si hay ID coincidente y llegada < salida, se fusionan en el mismo objeto[cite: 398, 399]."""
+    if len(arrivals) == 0 or len(departures) == 0:
+        return -1  # Devuelve código de error si alguna lista está vacía [cite: 401]
+
+    merged = []
+    used_deps = [False] * len(departures)
+
+    i = 0
+    while i < len(arrivals):
+        arr = arrivals[i]
+        j = 0
+        encontrado = False
+
+        while j < len(departures) and not encontrado:
+            dep = departures[j]
+            # Si es el mismo avión y la salida no se ha usado
+            if not used_deps[j] and arr.aircraft == dep.aircraft:
+
+                # Comprobar tiempos para ver si son compatibles [cite: 399]
+                if arr.time != "" and dep.departure != "":
+                    arr_h = int(arr.time.split(":")[0])
+                    arr_m = int(arr.time.split(":")[1])
+                    dep_h = int(dep.departure.split(":")[0])
+                    dep_m = int(dep.departure.split(":")[1])
+
+                    arr_mins = arr_h * 60 + arr_m
+                    dep_mins = dep_h * 60 + dep_m
+
+                    if arr_mins < dep_mins:
+                        # Tiempos compatibles, fusionar
+                        new_ac = Aircraft(arr.aircraft, arr.origen, arr.time, arr.airline, dep.destination,
+                                          dep.departure)
+                        merged.append(new_ac)
+                        used_deps[j] = True
+                        encontrado = True
+
+            j += 1
+
+        if not encontrado:
+            # Si no tiene salida asociada, se añade tal cual
+            merged.append(arr)
+
+        i += 1
+
+    # Añadir las salidas que no tuvieron llegada (vuelos nocturnos) [cite: 400]
+    j = 0
+    while j < len(departures):
+        if not used_deps[j]:
+            merged.append(departures[j])
+        j += 1
+
+    return merged
+
+
+def NightAircraft(aircrafts):
+    """Filtra y devuelve solo los aviones que tienen salida pero información de llegada vacía[cite: 404]."""
+    if len(aircrafts) == 0:
+        return -1  # Código de error si lista vacía [cite: 405]
+
+    night_flights = []
+    i = 0
+    while i < len(aircrafts):
+        if aircrafts[i].time == "" and aircrafts[i].departure != "":
+            night_flights.append(aircrafts[i])
+        i += 1
+
+    return night_flights

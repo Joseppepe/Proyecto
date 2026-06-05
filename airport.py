@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 
 
+import matplotlib.pyplot as plt
+
+
 class Airport:
     """Clase que representa un aeropuerto con su código, coordenadas y si pertenece al espacio Schengen."""
 
